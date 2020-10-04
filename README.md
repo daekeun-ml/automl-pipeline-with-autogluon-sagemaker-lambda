@@ -7,6 +7,10 @@ This repository contains the CloudFormation template and prewritten source code 
 * `lambda_function.py` is the source code for the Lambda function that kicks off the SageMaker training job when you upload your data to S3.
 * `sourcedir.tar.gz` is the `autogluon-tab-with-test.py` file pre-packaged for your convenience; the pipeline requires it to be gzipped.
 
+
+### Changed contents in the forked GitHub
+Corrected the error in the original GitHub code and modified the code to allow more choices (e.g. preset, evaluation metric, target variable) in the CloudFormation.
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.

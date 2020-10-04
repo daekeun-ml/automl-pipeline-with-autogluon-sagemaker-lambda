@@ -19,7 +19,7 @@ def lambda_handler(event, context):
   print(filename)
   dataset = filename.split('_')[0]
   print(dataset)
-  
+
   now = datetime.datetime.now
   str_time = now().strftime('%Y-%m-%d-%H-%M-%S-%f')[:-3]
   sm = boto3.Session().client('sagemaker')
@@ -32,7 +32,10 @@ def lambda_handler(event, context):
       'sagemaker_program': 'autogluon-tab-with-test.py',
       'sagemaker_region': os.environ['AWS_REGION'],
       'sagemaker_submit_directory': 's3://' + bucket + '/source/sourcedir.tar.gz',
-      's3-output': os.environ['S3_OUTPUT_PATH']
+      's3_output': os.environ['S3_OUTPUT_PATH'],
+      'target': os.environ['TARGET'],
+      'eval_metric': os.environ['EVAL_METRIC'], 
+      'presets': os.environ['PRESETS'],          
     },
     'AlgorithmSpecification': {
       'TrainingImage': '763104351884.dkr.ecr.' + os.environ['AWS_REGION'] + '.amazonaws.com/mxnet-training:1.6.0-cpu-py3',
@@ -61,7 +64,7 @@ def lambda_handler(event, context):
     'ResourceConfig': {
       'InstanceType': os.environ['AG_INSTANCE_TYPE'],
       'InstanceCount': 1,
-      'VolumeSizeInGB': 30
+      'VolumeSizeInGB': 50
     },
     'StoppingCondition': {
       'MaxRuntimeInSeconds': 86400

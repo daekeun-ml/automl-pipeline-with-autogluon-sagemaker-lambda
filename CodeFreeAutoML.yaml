@@ -9,7 +9,43 @@ Parameters:
   TrainingInstanceType:
     Type: String
     Default: m5.xlarge
+    AllowedValues: 
+      - m5.xlarge   
+      - m5.2xlarge
+      - m5.4xlarge
+      - c5.xlarge
+      - c5.2xlarge
+      - c5.4xlarge
+      - c5.9xlarge
+      - g4dn.xlarge
+      - p2.xlarge
+      - p3.2xlarge
     Description: The compute instance type used to run SageMaker training jobs kicked off automatically by the pipeline.
+  TargetVariable:
+    Type: String
+    Default: churn_yn
+    Description: Write the target variable of the dataframe. 
+  EvalMetric:
+    Type: String
+    Default: f1
+    AllowedValues: 
+      - accuracy
+      - nll
+      - f1
+      - mcc
+      - auc
+    Description: Specify the metrics the model will optimize.  
+  AutoMLPresets:
+    Type: String
+    Default: best_quality
+    AllowedValues: 
+      - best_quality
+      - best_quality_with_high_quality_refit
+      - high_quality_fast_inference_only_refit
+      - good_quality_faster_inference_only_refit
+      - medium_quality_faster_train
+      - optimize_for_deployment
+    Description: Specify AutoML presets.     
 
 Resources:
   Bucket:
@@ -59,7 +95,7 @@ Resources:
             print(filename)
             dataset = filename.split('_')[0]
             print(dataset)
-            
+    
             now = datetime.datetime.now
             str_time = now().strftime('%Y-%m-%d-%H-%M-%S-%f')[:-3]
             sm = boto3.Session().client('sagemaker')
@@ -72,7 +108,10 @@ Resources:
                 'sagemaker_program': 'autogluon-tab-with-test.py',
                 'sagemaker_region': os.environ['AWS_REGION'],
                 'sagemaker_submit_directory': 's3://' + bucket + '/source/sourcedir.tar.gz',
-                's3-output': os.environ['S3_OUTPUT_PATH']
+                's3_output': os.environ['S3_OUTPUT_PATH'],
+                'target': os.environ['TARGET'],
+                'eval_metric': os.environ['EVAL_METRIC'], 
+                'presets': os.environ['PRESETS'],          
               },
               'AlgorithmSpecification': {
                 'TrainingImage': '763104351884.dkr.ecr.' + os.environ['AWS_REGION'] + '.amazonaws.com/mxnet-training:1.6.0-cpu-py3',
@@ -101,7 +140,7 @@ Resources:
               'ResourceConfig': {
                 'InstanceType': os.environ['AG_INSTANCE_TYPE'],
                 'InstanceCount': 1,
-                'VolumeSizeInGB': 30
+                'VolumeSizeInGB': 50
               },
               'StoppingCondition': {
                 'MaxRuntimeInSeconds': 86400
@@ -120,8 +159,8 @@ Resources:
       Handler: index.lambda_handler
       Runtime: python3.7
       Description: Lambda to kick off SageMaker training job for code-free AutoML pipeline
-      MemorySize: 128
-      Timeout: 3
+      MemorySize: 512
+      Timeout: 20
       Role: !GetAtt LambdaIamRole.Arn
       Environment:
         Variables:
@@ -129,6 +168,9 @@ Resources:
           S3_OUTPUT_PATH: !Sub s3://${BucketName}/results/
           S3_TRIGGER_PATH: !Sub s3://${BucketName}/data/
           SAGEMAKER_ROLE_ARN: !GetAtt SageMakerIamRole.Arn
+          TARGET: !Sub ${TargetVariable}
+          EVAL_METRIC: !Sub ${EvalMetric} 
+          PRESETS: !Sub ${AutoMLPresets}                    
 
   S3InvokeLambdaPermission:
     Type: AWS::Lambda::Permission
